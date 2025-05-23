@@ -19,30 +19,31 @@ jobs:
         distribution: temurin
         java-version: 17
 
-    - name: Cache Gradle
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-        restore-keys: ${{ runner.os }}-gradle-
+    # ───────────────────────────────────────────────────────────────
+    # Garante que o gradle-wrapper.jar exista (caso ainda falte)
+    - name: Garantir gradle-wrapper.jar
+      run: |
+        mkdir -p gradle/wrapper
+        if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
+          curl -sL \
+            https://raw.githubusercontent.com/gradle/gradle/v8.2/gradle/wrapper/gradle-wrapper.jar \
+            -o gradle/wrapper/gradle-wrapper.jar
+        fi
+    # ───────────────────────────────────────────────────────────────
 
-    - name: Grant execute permission to Gradle wrapper
+    - name: Dar permissão de execução ao Gradle Wrapper
       run: chmod +x gradlew
 
     - name: Build debug APK
-      run: ./gradlew assembleDebug
+      run: ./gradlew :app:assembleDebug --stacktrace
 
+    #   🔍  Mostra o caminho real do APK nos logs (útil para debug)
+    - name: Listar APKs gerados
+      run: find $PWD -name "*-debug.apk" -print
+
+    # Caminho padrão do APK no Android Gradle Plugin 8
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
         name: app-debug
-        path: |
-          **/app-debug.apk
-    - name: Garantir gradle-wrapper.jar
-      run: |
-        if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
-          curl -sL https://raw.githubusercontent.com/gradle/gradle/v8.2/gradle/wrapper/gradle-wrapper.jar \
-               -o gradle/wrapper/gradle-wrapper.jar
-        fi
+        path: app/build/outputs/apk/debug/app-debug.apk
